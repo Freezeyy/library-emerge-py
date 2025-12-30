@@ -1,0 +1,204 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Borrow Book - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📖 Borrow Book</h2>
+    <p>You are about to borrow this book</p>
+</div>
+
+<div class="borrow-container">
+    <div class="book-preview-card">
+        {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}">
+        {% else %}
+            <div class="no-cover">📚</div>
+        {% endif %}
+        <h3>{{ book.title }}</h3>
+        <p class="author">by {{ book.author }}</p>
+        <p class="isbn">ISBN: {{ book.isbn }}</p>
+    </div>
+    
+    <div class="borrow-form-card">
+        <h3>Borrow Details</h3>
+        
+        <div class="info-box">
+            <h4>📋 Borrowing Rules</h4>
+            <ul>
+                <li>Maximum borrow period: <strong>2 weeks (14 days)</strong></li>
+                <li>You will receive a warning <strong>3 days before</strong> the due date</li>
+                <li>After due date: <strong>RM 1.00 fine per day</strong></li>
+                <li>You must request return through the system</li>
+                <li>Librarian will verify the book condition before finalizing return</li>
+            </ul>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>{{ form.borrow_duration_days.label }}</label>
+                {{ form.borrow_duration_days }}
+                {% if form.borrow_duration_days.errors %}
+                    <span class="error">{{ form.borrow_duration_days.errors.0 }}</span>
+                {% endif %}
+                <small class="form-text">Choose how long you need the book</small>
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <span class="error">{{ form.notes.errors.0 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-success">Confirm Borrow</button>
+                <a href="{% url 'book_detail' book.id %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .borrow-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 2rem;
+    }
+    
+    .book-preview-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+    }
+    
+    .book-preview-card img {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .no-cover {
+        width: 100%;
+        height: 400px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 6rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+    
+    .book-preview-card h3 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .author {
+        color: #7f8c8d;
+        margin-bottom: 0.5rem;
+    }
+    
+    .isbn {
+        color: #95a5a6;
+        font-size: 0.9rem;
+    }
+    
+    .borrow-form-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .borrow-form-card h3 {
+        color: #2c3e50;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-box {
+        background: #e8f4f8;
+        border-left: 4px solid #3498db;
+        padding: 1.5rem;
+        border-radius: 4px;
+        margin-bottom: 2rem;
+    }
+    
+    .info-box h4 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    
+    .info-box ul {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .info-box li {
+        padding: 0.5rem 0;
+        color: #555;
+    }
+    
+    .info-box li:before {
+        content: "✓ ";
+        color: #27ae60;
+        font-weight: bold;
+        margin-right: 0.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    .form-text {
+        display: block;
+        margin-top: 0.5rem;
+        color: #7f8c8d;
+        font-size: 0.875rem;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #7f8c8d;
+    }
+    
+    @media (max-width: 768px) {
+        .borrow-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

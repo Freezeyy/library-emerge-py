@@ -1,0 +1,81 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Delete Book - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>🗑️ Delete Book</h2>
+    <p style="color: #e74c3c;">Are you sure you want to delete this book?</p>
+</div>
+
+<div class="card">
+    <div class="book-preview">
+        {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}">
+        {% endif %}
+        <div>
+            <h3>{{ book.title }}</h3>
+            <p>by {{ book.author }}</p>
+            <p><strong>ISBN:</strong> {{ book.isbn }}</p>
+            <p><strong>Copies:</strong> {{ book.total_copies }}</p>
+        </div>
+    </div>
+    
+    <div class="warning-box">
+        <strong>⚠️ Warning:</strong> This action cannot be undone. All borrow records associated with this book will remain in the system.
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+            <button type="submit" class="btn btn-danger">Yes, Delete Book</button>
+            <a href="{% url 'book_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+    .book-preview {
+        display: flex;
+        gap: 2rem;
+        align-items: center;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .book-preview img {
+        width: 120px;
+        height: 160px;
+        object-fit: cover;
+        border-radius: 4px;
+    }
+    
+    .book-preview h3 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .book-preview p {
+        margin-bottom: 0.25rem;
+        color: #555;
+    }
+    
+    .warning-box {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        padding: 1rem;
+        border-radius: 4px;
+        color: #856404;
+    }
+    
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #7f8c8d;
+    }
+</style>
+{% endblock %}

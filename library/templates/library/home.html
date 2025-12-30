@@ -1,0 +1,74 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Home - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>Welcome to Library Management System</h2>
+    <p>Manage your library efficiently with our comprehensive system.</p>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+    <div class="card" style="text-align: center;">
+        <h3>📚 Total Books</h3>
+        <p style="font-size: 3rem; color: #3498db; margin: 1rem 0;">{{ total_books }}</p>
+        <a href="{% url 'book_list' %}" class="btn btn-primary">View Books</a>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <h3>👥 Total Students</h3>
+        <p style="font-size: 3rem; color: #27ae60; margin: 1rem 0;">{{ total_students }}</p>
+        <a href="{% url 'student_list' %}" class="btn btn-success">View Students</a>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <h3>📖 Books Borrowed</h3>
+        <p style="font-size: 3rem; color: #e67e22; margin: 1rem 0;">{{ borrowed_books }}</p>
+        <a href="{% url 'borrow_list' %}" class="btn btn-primary">View Records</a>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <h3>⚠️ Overdue Books</h3>
+        <p style="font-size: 3rem; color: #e74c3c; margin: 1rem 0;">{{ overdue_books }}</p>
+        <a href="{% url 'borrow_list' %}" class="btn btn-danger">View Overdue</a>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Recent Borrow Records</h3>
+    {% if recent_borrows %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in recent_borrows %}
+                <tr>
+                    <td>{{ record.student.name }}</td>
+                    <td>{{ record.book.title }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if record.status == 'borrowed' %}
+                            <span class="badge badge-success">Borrowed</span>
+                        {% elif record.status == 'returned' %}
+                            <span class="badge badge-success">Returned</span>
+                        {% else %}
+                            <span class="badge badge-danger">Overdue</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No borrow records found.</p>
+    {% endif %}
+</div>
+{% endblock %}

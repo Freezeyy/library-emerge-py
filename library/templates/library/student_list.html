@@ -1,0 +1,85 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Students - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>👥 Students</h2>
+    
+    <div class="search-box">
+        <form method="get">
+            <input type="text" name="q" placeholder="Search by name, student ID, or email..." value="{{ query }}">
+            <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+    </div>
+    
+    {% if student_data %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Currently Borrowed</th>
+                    <th>Overdue Books</th>
+                    <th>Pending Fines</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for data in student_data %}
+                <tr>
+                    <td>{{ data.student.student_id }}</td>
+                    <td>{{ data.student.name }}</td>
+                    <td>{{ data.student.email }}</td>
+                    <td>{{ data.student.phone }}</td>
+                    <td>
+                        {% if data.borrowed_count > 0 %}
+                            <span class="badge badge-info">{{ data.borrowed_count }}</span>
+                        {% else %}
+                            <span style="color: #95a5a6;">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if data.overdue_count > 0 %}
+                            <span class="badge badge-danger">{{ data.overdue_count }}</span>
+                        {% else %}
+                            <span style="color: #95a5a6;">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if data.total_fines > 0 %}
+                            <span style="color: #e74c3c; font-weight: bold;">RM {{ data.total_fines }}</span>
+                        {% else %}
+                            <span style="color: #27ae60;">RM 0.00</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'student_detail' data.student.id %}" class="btn btn-primary btn-sm">View Details</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No students found.</p>
+    {% endif %}
+</div>
+
+<style>
+    .badge-info {
+        background: #3498db;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Student Dashboard - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2>Welcome, {{ student.name }}! 👋</h2>
+            <p>Student ID: {{ student.student_id }}</p>
+        </div>
+        <a href="{% url 'logout' %}" class="btn btn-danger">Logout</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;">
+    <div class="card" style="text-align: center;">
+        <h3>📖 Currently Borrowed</h3>
+        <p style="font-size: 3rem; color: #3498db; margin: 1rem 0;">{{ borrowed_books.count }}</p>
+    </div>
+    
+    <div class="card" style="text-align: center;">
+        <h3>💰 Pending Fines</h3>
+        <p style="font-size: 3rem; color: #e74c3c; margin: 1rem 0;">
+            RM {{ total_fines|floatformat:2 }}
+        </p>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Currently Borrowed Books</h3>
+    {% if borrowed_books %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Book Title</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Days Left</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in borrowed_books %}
+                <tr>
+                    <td>{{ record.book.title }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if record.days_until_due >= 0 %}
+                            <span style="color: {% if record.should_warn %}#e67e22{% else %}#27ae60{% endif %}">
+                                {{ record.days_until_due }} days
+                            </span>
+                        {% else %}
+                            <span style="color: #e74c3c; font-weight: bold;">
+                                {{ record.days_until_due|cut:"-" }} days overdue
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.status == 'borrowed' %}
+                            {% if record.should_warn %}
+                                <span class="badge badge-warning">⚠️ Due Soon</span>
+                            {% else %}
+                                <span class="badge badge-success">Borrowed</span>
+                            {% endif %}
+                        {% elif record.status == 'pending_return' %}
+                            <span class="badge" style="background: #3498db; color: white;">Pending Verification</span>
+                        {% elif record.status == 'overdue' %}
+                            <span class="badge badge-danger">Overdue</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.status == 'borrowed' or record.status == 'overdue' %}
+                            <a href="{% url 'request_return' record.id %}" class="btn btn-primary btn-sm">Request Return</a>
+                        {% elif record.status == 'pending_return' %}
+                            <span style="color: #7f8c8d; font-size: 0.9rem;">Awaiting librarian verification</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% for record in borrowed_books %}
+            {% if record.should_warn and record.status == 'borrowed' %}
+                <div class="alert alert-warning" style="margin-top: 1rem;">
+                    ⚠️ <strong>Warning:</strong> "{{ record.book.title }}" is due in {{ record.days_until_due }} day{{ record.days_until_due|pluralize }}. Please return it soon to avoid fines.
+                </div>
+            {% elif record.is_overdue %}
+                <div class="alert" style="background: #fee; color: #c33; border: 1px solid #fcc; margin-top: 1rem;">
+                    ❌ <strong>Overdue:</strong> "{{ record.book.title }}" is {{ record.days_until_due|cut:"-" }} day{{ record.days_until_due|cut:"-"|pluralize }} overdue. Fine: RM{{ record.calculate_fine }}. Please return immediately!
+                </div>
+            {% endif %}
+        {% endfor %}
+    {% else %}
+        <p>You have no borrowed books.</p>
+        <a href="{% url 'book_list' %}" class="btn btn-primary" style="margin-top: 1rem;">Browse Books</a>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Pending Fines</h3>
+    {% if fines %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Book</th>
+                    <th>Amount</th>
+                    <th>Days Overdue</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for fine in fines %}
+                <tr>
+                    <td>{{ fine.borrow_record.book.title }}</td>
+                    <td>RM {{ fine.amount }}</td>
+                    <td>{{ fine.amount|floatformat:"0" }} days</td>
+                    <td>
+                        <span class="badge badge-warning">Pending</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>You have no pending fines. Keep it up! ✨</p>
+    {% endif %}
+</div>
+
+<div class="card">
+    <h3>Recent History</h3>
+    {% if borrow_history %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Book Title</th>
+                    <th>Borrow Date</th>
+                    <th>Return Date</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in borrow_history|slice:":5" %}
+                <tr>
+                    <td>{{ record.book.title }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
+                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if record.status == 'returned' %}
+                            <span class="badge badge-success">Returned</span>
+                        {% elif record.status == 'pending_return' %}
+                            <span class="badge" style="background: #3498db; color: white;">Pending</span>
+                        {% elif record.status == 'borrowed' %}
+                            <span class="badge badge-success">Borrowed</span>
+                        {% else %}
+                            <span class="badge badge-danger">Overdue</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No borrow history yet.</p>
+    {% endif %}
+</div>
+
+<style>
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffc107;
+        padding: 1rem;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}

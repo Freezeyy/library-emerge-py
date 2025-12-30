@@ -1,0 +1,194 @@
+{% extends 'library/base.html' %}
+
+{% block title %}{{ book.title }} - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <a href="{% url 'book_list' %}" class="btn btn-secondary">← Back to Books</a>
+</div>
+
+<div class="book-detail-container">
+    <div class="book-cover-large">
+        {% if book.cover_image %}
+            <img src="{{ book.cover_image.url }}" alt="{{ book.title }}">
+        {% else %}
+            <div class="no-cover-large">
+                <span>📚</span>
+                <p>No Cover Available</p>
+            </div>
+        {% endif %}
+    </div>
+    
+    <div class="book-details">
+        <h1>{{ book.title }}</h1>
+        <p class="book-author">by {{ book.author }}</p>
+        
+        <div class="book-info-grid">
+            <div class="info-item">
+                <strong>Publisher:</strong>
+                <span>{{ book.publisher }}</span>
+            </div>
+            
+            <div class="info-item">
+                <strong>Category:</strong>
+                <span class="category-badge">{{ book.category }}</span>
+            </div>
+            
+            <div class="info-item">
+                <strong>Availability:</strong>
+                <span class="{% if book.available_copies > 0 %}text-success{% else %}text-danger{% endif %}">
+                    {% if book.available_copies > 0 %}Available{% else %}Not Available{% endif %}
+                </span>
+            </div>
+        </div>
+        
+        {% if book.description %}
+        <div class="book-description">
+            <h3>Description</h3>
+            <p>{{ book.description }}</p>
+        </div>
+        {% endif %}
+        
+        <div class="book-actions">
+            {% if user.is_authenticated and user.userprofile.role == 'librarian' %}
+                <a href="{% url 'edit_book' book.id %}" class="btn btn-primary">Edit Book</a>
+                <a href="{% url 'delete_book' book.id %}" class="btn btn-danger">Delete Book</a>
+            {% elif user.is_authenticated and user.userprofile.role == 'student' %}
+                {% if book.available_copies > 0 %}
+                    <a href="{% url 'borrow_book' book.id %}" class="btn btn-success">Borrow This Book</a>
+                {% else %}
+                    <button class="btn btn-secondary" disabled>Currently Unavailable</button>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'login' %}" class="btn btn-primary">Login to Borrow</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+    .book-detail-container {
+        display: grid;
+        grid-template-columns: 350px 1fr;
+        gap: 3rem;
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .book-cover-large {
+        width: 100%;
+        height: 500px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .book-cover-large img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    
+    .no-cover-large {
+        text-align: center;
+        color: #95a5a6;
+    }
+    
+    .no-cover-large span {
+        font-size: 6rem;
+        display: block;
+    }
+    
+    .book-details h1 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .book-author {
+        color: #7f8c8d;
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .book-info-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .info-item strong {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .info-item span {
+        color: #2c3e50;
+        font-size: 1.1rem;
+    }
+    
+    .category-badge {
+        display: inline-block;
+        background: #e8f4f8;
+        color: #3498db;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    
+    .text-success {
+        color: #27ae60 !important;
+        font-weight: 500;
+    }
+    
+    .text-danger {
+        color: #e74c3c !important;
+        font-weight: 500;
+    }
+    
+    .book-description {
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .book-description h3 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+    }
+    
+    .book-description p {
+        color: #555;
+        line-height: 1.6;
+    }
+    
+    .book-actions {
+        display: flex;
+        gap: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .book-detail-container {
+            grid-template-columns: 1fr;
+        }
+        .book-info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+</style>
+{% endblock %}

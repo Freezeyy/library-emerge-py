@@ -1,0 +1,83 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Borrow Records - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>📋 Borrow Records</h2>
+    
+    <div class="search-box">
+        <form method="get">
+            <select name="status" onchange="this.form.submit()">
+                <option value="">All Status</option>
+                <option value="borrowed" {% if status_filter == 'borrowed' %}selected{% endif %}>Borrowed</option>
+                <option value="pending_return" {% if status_filter == 'pending_return' %}selected{% endif %}>Pending Return</option>
+                <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Returned</option>
+                <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue</option>
+            </select>
+        </form>
+    </div>
+    
+    {% if records %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Status</th>
+                    <th>Fine</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in records %}
+                <tr>
+                    <td>{{ record.student.name }}</td>
+                    <td>{{ record.book.title }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if record.status == 'borrowed' %}
+                            <span class="badge badge-success">Borrowed</span>
+                        {% elif record.status == 'pending_return' %}
+                            <span class="badge" style="background: #3498db; color: white;">Pending Return</span>
+                        {% elif record.status == 'returned' %}
+                            <span class="badge badge-success">Returned</span>
+                        {% else %}
+                            <span class="badge badge-danger">Overdue</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.calculate_fine > 0 %}
+                            <span style="color: #e74c3c; font-weight: bold;">RM {{ record.calculate_fine|floatformat:2 }}</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if record.status == 'pending_return' %}
+                            <a href="{% url 'verify_return' record.id %}" class="btn btn-success btn-sm">Verify Return</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No borrow records found.</p>
+    {% endif %}
+</div>
+
+<style>
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

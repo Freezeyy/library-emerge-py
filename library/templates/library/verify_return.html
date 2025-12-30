@@ -1,0 +1,176 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Verify Return - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>✅ Verify Book Return</h2>
+    <p>Verify that the student has returned the book in proper condition</p>
+</div>
+
+<div class="verify-container">
+    <div class="return-info-card">
+        <h3>Return Information</h3>
+        
+        <div class="info-section">
+            <h4>Student Details</h4>
+            <p><strong>Name:</strong> {{ record.student.name }}</p>
+            <p><strong>Student ID:</strong> {{ record.student.student_id }}</p>
+            <p><strong>Email:</strong> {{ record.student.email }}</p>
+        </div>
+        
+        <div class="info-section">
+            <h4>Book Details</h4>
+            <p><strong>Title:</strong> {{ record.book.title }}</p>
+            <p><strong>Author:</strong> {{ record.book.author }}</p>
+            <p><strong>ISBN:</strong> {{ record.book.isbn }}</p>
+        </div>
+        
+        <div class="info-section">
+            <h4>Borrow Details</h4>
+            <p><strong>Borrow Date:</strong> {{ record.borrow_date|date:"M d, Y" }}</p>
+            <p><strong>Due Date:</strong> {{ record.due_date|date:"M d, Y" }}</p>
+            <p><strong>Return Requested:</strong> {{ record.return_requested_date|date:"M d, Y" }}</p>
+            
+            {% if record.is_overdue %}
+                <div class="overdue-warning">
+                    ⚠️ <strong>Overdue by {{ record.days_until_due|cut:"-" }} day{{ record.days_until_due|cut:"-"|pluralize }}</strong>
+                    <p>Fine: RM {{ record.calculate_fine }}</p>
+                </div>
+            {% else %}
+                <p class="ontime">✓ Returned on time</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="verify-form-card">
+        <h3>Verification Form</h3>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>{{ form.condition.label }}</label>
+                {{ form.condition }}
+                {% if form.condition.errors %}
+                    <span class="error">{{ form.condition.errors.0 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.librarian_notes.label }}</label>
+                {{ form.librarian_notes }}
+                {% if form.librarian_notes.errors %}
+                    <span class="error">{{ form.librarian_notes.errors.0 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="button-group">
+                <button type="submit" class="btn btn-success">✓ Approve Return</button>
+                <a href="{% url 'reject_return' record.id %}" class="btn btn-danger">✗ Reject Return</a>
+                <a href="{% url 'borrow_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .verify-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+    }
+    
+    .return-info-card, .verify-form-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-section {
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .info-section:last-child {
+        border-bottom: none;
+    }
+    
+    .info-section h4 {
+        color: #2c3e50;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .info-section p {
+        margin-bottom: 0.5rem;
+        color: #555;
+    }
+    
+    .overdue-warning {
+        background: #fee;
+        border: 1px solid #fcc;
+        padding: 1rem;
+        border-radius: 4px;
+        color: #c33;
+        margin-top: 1rem;
+    }
+    
+    .ontime {
+        color: #27ae60;
+        font-weight: 500;
+        margin-top: 1rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: #2c3e50;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 1rem;
+    }
+    
+    input[type="radio"] {
+        margin-right: 0.5rem;
+    }
+    
+    label input[type="radio"] {
+        margin-right: 0.5rem;
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #7f8c8d;
+    }
+    
+    @media (max-width: 968px) {
+        .verify-container {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
