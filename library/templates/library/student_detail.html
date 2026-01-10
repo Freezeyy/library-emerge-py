@@ -63,8 +63,8 @@
                 {% for record in current_borrows %}
                 <tr>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y g:i A" }}</td>
                     <td>
                         {% if record.days_until_due >= 0 %}
                             <span style="color: {% if record.should_warn %}#e67e22{% else %}#27ae60{% endif %}">
@@ -118,7 +118,7 @@
                 {% for fine in pending_fines %}
                 <tr>
                     <td>{{ fine.borrow_record.book.title }}</td>
-                    <td>{{ fine.borrow_record.return_date|date:"M d, Y" }}</td>
+                    <td>{{ fine.borrow_record.return_date|date:"M d, Y g:i A" }}</td>
                     <td>{{ fine.amount|floatformat:"0" }} days</td>
                     <td style="color: #e74c3c; font-weight: bold;">RM {{ fine.amount|floatformat:2 }}</td>
                     <td>
@@ -154,9 +154,9 @@
                 {% for record in borrow_records|slice:":10" %}
                 <tr>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{{ record.due_date|date:"M d, Y" }}</td>
-                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y g:i A" }}</td>
+                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y g:i A" }}{% else %}-{% endif %}</td>
                     <td>
                         {% if record.status == 'returned' %}
                             <span class="badge badge-success">Returned</span>

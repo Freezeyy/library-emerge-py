@@ -75,26 +75,61 @@ class BorrowRecord(models.Model):
     def save(self, *args, **kwargs):
         if not self.due_date:
             self.due_date = timezone.now() + timedelta(days=self.borrow_duration_days)
+        
+        # Automatically update status to 'overdue' if due date has passed and book is not returned
+        if self.status != 'returned' and timezone.now() > self.due_date:
+            # Only change to overdue if not already pending_return (preserve pending_return status)
+            if self.status != 'pending_return':
+                self.status = 'overdue'
+        # If due date hasn't passed and status is overdue but shouldn't be, change back to borrowed
+        elif self.status == 'overdue' and timezone.now() <= self.due_date:
+            self.status = 'borrowed'
+        
         super().save(*args, **kwargs)
 
     def calculate_fine(self):
         """Calculate fine based on overdue days"""
         if self.status == 'returned' and self.return_date:
             if self.return_date > self.due_date:
-                days_overdue = (self.return_date - self.due_date).days
+                # Calculate days overdue based on dates
+                return_date = self.return_date.date() if hasattr(self.return_date, 'date') else self.return_date
+                due_date = self.due_date.date() if hasattr(self.due_date, 'date') else self.due_date
+                days_overdue = (return_date - due_date).days
+                # If same calendar day but time has passed, count as 1 day
+                if days_overdue == 0:
+                    days_overdue = 1
                 return days_overdue * 1.0  # RM1 per day
         elif self.status in ['borrowed', 'overdue', 'pending_return']:
             if timezone.now() > self.due_date:
-                days_overdue = (timezone.now() - self.due_date).days
+                # Calculate days overdue based on dates
+                now_date = timezone.now().date()
+                due_date = self.due_date.date() if hasattr(self.due_date, 'date') else self.due_date
+                days_overdue = (now_date - due_date).days
+                # If same calendar day but time has passed, count as 1 day overdue
+                if days_overdue == 0:
+                    days_overdue = 1
                 return days_overdue * 1.0
         return 0.0
     
     def days_until_due(self):
-        """Calculate days until due date"""
-        if self.status in ['borrowed', 'pending_return']:
-            delta = self.due_date - timezone.now()
-            return delta.days
-        return None
+        """Calculate days until due date (negative if overdue)"""
+        if self.status == 'returned':
+            return None
+        delta = self.due_date - timezone.now()
+        return delta.days
+    
+    def days_overdue(self):
+        """Calculate days overdue as a positive number"""
+        if self.status == 'returned' or timezone.now() <= self.due_date:
+            return 0
+        # Calculate days overdue based on dates
+        now_date = timezone.now().date()
+        due_date = self.due_date.date() if hasattr(self.due_date, 'date') else self.due_date
+        days_overdue = (now_date - due_date).days
+        # If same calendar day but time has passed, count as 1 day overdue
+        if days_overdue == 0:
+            days_overdue = 1
+        return days_overdue
     
     def is_overdue(self):
         """Check if book is overdue"""

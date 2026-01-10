@@ -1,0 +1,125 @@
+{% extends 'library/base.html' %}
+
+{% block title %}Fines - Library Management System{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2>💰 Fines</h2>
+    
+    <div class="search-box">
+        <form method="get">
+            <select name="status" onchange="this.form.submit()">
+                <option value="">All Status</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>Paid</option>
+            </select>
+        </form>
+    </div>
+    
+    {% if fines %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Book</th>
+                    <th>Borrow Date</th>
+                    <th>Due Date</th>
+                    <th>Return Date</th>
+                    <th>Days Overdue</th>
+                    <th>Fine Amount</th>
+                    <th>Status</th>
+                    {% if is_librarian %}
+                    <th>Action</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for fine in fines %}
+                <tr>
+                    <td>{{ fine.borrow_record.student.name }}</td>
+                    <td>{{ fine.borrow_record.book.title }}</td>
+                    <td>{{ fine.borrow_record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ fine.borrow_record.due_date|date:"M d, Y g:i A" }}</td>
+                    <td>{% if fine.borrow_record.return_date %}{{ fine.borrow_record.return_date|date:"M d, Y g:i A" }}{% else %}-{% endif %}</td>
+                    <td>
+                        {% if fine.days_overdue > 0 %}
+                            {{ fine.days_overdue }} day{{ fine.days_overdue|pluralize }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span style="color: #e74c3c; font-weight: bold;">RM {{ fine.amount|floatformat:2 }}</span>
+                    </td>
+                    <td>
+                        {% if fine.status == 'paid' %}
+                            <span class="badge badge-success">Paid</span>
+                            {% if fine.paid_date %}
+                                <br><small>{{ fine.paid_date|date:"M d, Y g:i A" }}</small>
+                            {% endif %}
+                        {% else %}
+                            <span class="badge badge-danger">Pending</span>
+                            {% if fine.is_calculated %}
+                                <br><small style="color: #7f8c8d;">(Not yet recorded)</small>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% if is_librarian %}
+                    <td>
+                        {% if fine.status == 'pending' %}
+                            {% if fine.is_calculated %}
+                                <form method="post" action="{% url 'create_and_mark_fine_paid' fine.borrow_record.id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark this fine as paid?')">Mark as Paid</button>
+                                </form>
+                            {% else %}
+                                <form method="post" action="{% url 'mark_fine_paid' fine.fine_id %}" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Mark this fine as paid?')">Mark as Paid</button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <span style="color: #7f8c8d; font-size: 0.9rem;">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 1.5rem; padding: 1rem; background: #ecf0f1; border-radius: 4px;">
+            <strong>Total Fines: {{ total_count }}</strong>
+            <br>
+            <strong>Total Amount: RM {{ total_amount|floatformat:2 }}</strong>
+        </div>
+    {% else %}
+        <p>No fines found.</p>
+    {% endif %}
+</div>
+
+<style>
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    
+    .badge-success {
+        background: #27ae60;
+        color: white;
+    }
+    
+    .badge-danger {
+        background: #e74c3c;
+        color: white;
+    }
+    
+    .btn-sm {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+

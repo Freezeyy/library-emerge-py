@@ -10,10 +10,11 @@
         <form method="get">
             <select name="status" onchange="this.form.submit()">
                 <option value="">All Status</option>
+                <option value="currently_borrowed" {% if status_filter == 'currently_borrowed' %}selected{% endif %}>Currently Borrowed</option>
                 <option value="borrowed" {% if status_filter == 'borrowed' %}selected{% endif %}>Borrowed</option>
                 <option value="pending_return" {% if status_filter == 'pending_return' %}selected{% endif %}>Pending Return</option>
-                <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Returned</option>
                 <option value="overdue" {% if status_filter == 'overdue' %}selected{% endif %}>Overdue</option>
+                <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Returned</option>
             </select>
         </form>
     </div>
@@ -37,9 +38,9 @@
                 <tr>
                     <td>{{ record.student.name }}</td>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{{ record.due_date|date:"M d, Y" }}</td>
-                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y g:i A" }}</td>
+                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y g:i A" }}{% else %}-{% endif %}</td>
                     <td>
                         {% if record.status == 'borrowed' %}
                             <span class="badge badge-success">Borrowed</span>

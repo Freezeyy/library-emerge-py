@@ -45,17 +45,21 @@
                 {% for record in borrowed_books %}
                 <tr>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y g:i A" }}</td>
                     <td>
-                        {% if record.days_until_due >= 0 %}
-                            <span style="color: {% if record.should_warn %}#e67e22{% else %}#27ae60{% endif %}">
-                                {{ record.days_until_due }} days
-                            </span>
+                        {% if record.days_until_due is not None %}
+                            {% if record.days_until_due >= 0 %}
+                                <span style="color: {% if record.should_warn %}#e67e22{% else %}#27ae60{% endif %}">
+                                    {{ record.days_until_due }} days
+                                </span>
+                            {% else %}
+                                <span style="color: #e74c3c; font-weight: bold;">
+                                    {{ record.days_overdue }} days overdue
+                                </span>
+                            {% endif %}
                         {% else %}
-                            <span style="color: #e74c3c; font-weight: bold;">
-                                {{ record.days_until_due|cut:"-" }} days overdue
-                            </span>
+                            <span style="color: #7f8c8d;">-</span>
                         {% endif %}
                     </td>
                     <td>
@@ -90,7 +94,7 @@
                 </div>
             {% elif record.is_overdue %}
                 <div class="alert" style="background: #fee; color: #c33; border: 1px solid #fcc; margin-top: 1rem;">
-                    ❌ <strong>Overdue:</strong> "{{ record.book.title }}" is {{ record.days_until_due|cut:"-" }} day{{ record.days_until_due|cut:"-"|pluralize }} overdue. Fine: RM{{ record.calculate_fine }}. Please return immediately!
+                    ❌ <strong>Overdue:</strong> "{{ record.book.title }}" is {{ record.days_overdue }} day{{ record.days_overdue|pluralize }} overdue. Fine: RM{{ record.calculate_fine|floatformat:2 }}. Please return immediately!
                 </div>
             {% endif %}
         {% endfor %}
@@ -146,8 +150,8 @@
                 {% for record in borrow_history|slice:":5" %}
                 <tr>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y" }}{% else %}-{% endif %}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{% if record.return_date %}{{ record.return_date|date:"M d, Y g:i A" }}{% else %}-{% endif %}</td>
                     <td>
                         {% if record.status == 'returned' %}
                             <span class="badge badge-success">Returned</span>

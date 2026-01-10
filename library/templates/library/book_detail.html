@@ -49,13 +49,25 @@
         </div>
         {% endif %}
         
+        {% if has_overdue %}
+        <div class="alert alert-warning" style="margin-bottom: 1.5rem;">
+            <strong>⚠️ Borrowing Restricted:</strong> You have {{ overdue_count }} overdue book(s). 
+            Please <a href="{% url 'student_dashboard' %}" style="color: #856404; text-decoration: underline;">return them</a> before borrowing new books.
+        </div>
+        {% endif %}
+        
         <div class="book-actions">
             {% if user.is_authenticated and user.userprofile.role == 'librarian' %}
                 <a href="{% url 'edit_book' book.id %}" class="btn btn-primary">Edit Book</a>
                 <a href="{% url 'delete_book' book.id %}" class="btn btn-danger">Delete Book</a>
             {% elif user.is_authenticated and user.userprofile.role == 'student' %}
                 {% if book.available_copies > 0 %}
-                    <a href="{% url 'borrow_book' book.id %}" class="btn btn-success">Borrow This Book</a>
+                    {% if has_overdue %}
+                        <button class="btn btn-secondary" disabled title="You have overdue books. Please return them first.">Cannot Borrow (Overdue Books)</button>
+                        <a href="{% url 'student_dashboard' %}" class="btn btn-warning">View My Overdue Books</a>
+                    {% else %}
+                        <a href="{% url 'borrow_book' book.id %}" class="btn btn-success">Borrow This Book</a>
+                    {% endif %}
                 {% else %}
                     <button class="btn btn-secondary" disabled>Currently Unavailable</button>
                 {% endif %}
@@ -179,6 +191,26 @@
     .book-actions {
         display: flex;
         gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        border: 1px solid #ffc107;
+        color: #856404;
+        padding: 1rem;
+        border-radius: 5px;
+    }
+    
+    .btn-warning {
+        background: #ffc107;
+        color: #856404;
+        border: none;
+    }
+    
+    .btn-warning:hover {
+        background: #e0a800;
+        color: #856404;
     }
     
     @media (max-width: 768px) {

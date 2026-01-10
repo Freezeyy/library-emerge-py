@@ -65,9 +65,28 @@
             transition: border-color 0.3s;
         }
         
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             outline: none;
             border-color: #667eea;
+        }
+        
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+            background: white;
+        }
+        
+        .student-fields {
+            display: none;
+        }
+        
+        .student-fields.show {
+            display: block;
         }
         
         .btn {
@@ -124,7 +143,7 @@
     <div class="register-container">
         <div class="register-header">
             <h1>📚 Library System</h1>
-            <p>Create your student account</p>
+            <p>Create your account</p>
         </div>
         
         {% if messages %}
@@ -135,8 +154,16 @@
             {% endfor %}
         {% endif %}
         
-        <form method="post">
+        <form method="post" id="registerForm">
             {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Role</label>
+                <select name="role" id="roleSelect" required>
+                    <option value="student" {% if role == 'student' or not role %}selected{% endif %}>Student</option>
+                    <option value="librarian" {% if role == 'librarian' %}selected{% endif %}>Librarian</option>
+                </select>
+            </div>
             
             <div class="form-group">
                 <label>Username</label>
@@ -148,9 +175,9 @@
                 <input type="text" name="name" required>
             </div>
             
-            <div class="form-group">
+            <div class="form-group student-fields" id="studentIdField">
                 <label>Student ID</label>
-                <input type="text" name="student_id" required>
+                <input type="text" name="student_id" id="student_id">
             </div>
             
             <div class="form-group">
@@ -160,7 +187,7 @@
             
             <div class="form-group">
                 <label>Phone</label>
-                <input type="tel" name="phone" required>
+                <input type="tel" name="phone">
             </div>
             
             <div class="form-group">
@@ -175,6 +202,26 @@
             
             <button type="submit" class="btn btn-primary">Register</button>
         </form>
+        
+        <script>
+            const roleSelect = document.getElementById('roleSelect');
+            const studentIdField = document.getElementById('studentIdField');
+            const studentIdInput = document.getElementById('student_id');
+            
+            function toggleStudentFields() {
+                if (roleSelect.value === 'student') {
+                    studentIdField.classList.add('show');
+                    studentIdInput.setAttribute('required', 'required');
+                } else {
+                    studentIdField.classList.remove('show');
+                    studentIdInput.removeAttribute('required');
+                    studentIdInput.value = '';
+                }
+            }
+            
+            roleSelect.addEventListener('change', toggleStudentFields);
+            toggleStudentFields(); // Initialize on page load
+        </script>
         
         <div class="login-link">
             Already have an account? <a href="{% url 'login' %}">Login here</a>

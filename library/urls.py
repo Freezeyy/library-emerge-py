@@ -29,4 +29,8 @@ urlpatterns = [
     path('borrows/<int:record_id>/request-return/', views.request_return, name='request_return'),
     path('borrows/<int:record_id>/verify-return/', views.verify_return, name='verify_return'),
     path('borrows/<int:record_id>/reject-return/', views.reject_return, name='reject_return'),
+    
+    # Fine Management
+    path('fines/<int:fine_id>/mark-paid/', views.mark_fine_paid, name='mark_fine_paid'),
+    path('fines/<int:record_id>/create-and-mark-paid/', views.create_and_mark_fine_paid, name='create_and_mark_fine_paid'),
 ]

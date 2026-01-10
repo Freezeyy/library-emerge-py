@@ -12,8 +12,8 @@
     <div class="book-info">
         <h3>{{ record.book.title }}</h3>
         <p><strong>Student:</strong> {{ record.student.name }} ({{ record.student.student_id }})</p>
-        <p><strong>Borrow Date:</strong> {{ record.borrow_date|date:"M d, Y" }}</p>
-        <p><strong>Due Date:</strong> {{ record.due_date|date:"M d, Y" }}</p>
+        <p><strong>Borrow Date:</strong> {{ record.borrow_date|date:"M d, Y g:i A" }}</p>
+        <p><strong>Due Date:</strong> {{ record.due_date|date:"M d, Y g:i A" }}</p>
     </div>
     
     <form method="post">

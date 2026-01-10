@@ -28,9 +28,9 @@
         
         <div class="info-section">
             <h4>Borrow Details</h4>
-            <p><strong>Borrow Date:</strong> {{ record.borrow_date|date:"M d, Y" }}</p>
-            <p><strong>Due Date:</strong> {{ record.due_date|date:"M d, Y" }}</p>
-            <p><strong>Return Requested:</strong> {{ record.return_requested_date|date:"M d, Y" }}</p>
+            <p><strong>Borrow Date:</strong> {{ record.borrow_date|date:"M d, Y g:i A" }}</p>
+            <p><strong>Due Date:</strong> {{ record.due_date|date:"M d, Y g:i A" }}</p>
+            <p><strong>Return Requested:</strong> {{ record.return_requested_date|date:"M d, Y g:i A" }}</p>
             
             {% if record.is_overdue %}
                 <div class="overdue-warning">

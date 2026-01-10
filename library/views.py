@@ -13,10 +13,33 @@ from django.db.models import F
 from django.db import models
 
 def home(request):
+    # Update overdue statuses for books that are past due date
+    # This ensures the status is current when displaying the home page
+    overdue_records = BorrowRecord.objects.filter(
+        status__in=['borrowed', 'pending_return'],
+        due_date__lt=timezone.now()
+    ).exclude(status='returned')
+    
+    # Update status to overdue (this will trigger the save() method which handles the logic)
+    for record in overdue_records:
+        if record.status != 'pending_return':  # Don't change pending_return status
+            record.status = 'overdue'
+            record.save(update_fields=['status'])
+    
     total_books = Book.objects.count()
     total_students = Student.objects.count()
-    borrowed_books = BorrowRecord.objects.filter(status='borrowed').count()
-    overdue_books = BorrowRecord.objects.filter(status='overdue').count()
+    # Count all books that are currently borrowed (not returned yet)
+    # This includes 'borrowed', 'overdue', and 'pending_return' statuses
+    borrowed_books = BorrowRecord.objects.filter(
+        status__in=['borrowed', 'overdue', 'pending_return']
+    ).exclude(status='returned').count()
+    
+    # Count overdue books: due_date has passed and status is not 'returned'
+    overdue_books = BorrowRecord.objects.filter(
+        status__in=['borrowed', 'overdue', 'pending_return'],
+        due_date__lt=timezone.now()
+    ).exclude(status='returned').count()
+    
     recent_borrows = BorrowRecord.objects.all()[:5]
     
     context = {
@@ -135,7 +158,12 @@ def student_detail(request, student_id):
 
 def borrow_list(request):
     status_filter = request.GET.get('status', '')
-    if status_filter:
+    if status_filter == 'currently_borrowed':
+        # Show all books that are currently borrowed (not returned yet)
+        records = BorrowRecord.objects.filter(
+            status__in=['borrowed', 'overdue', 'pending_return']
+        ).exclude(status='returned')
+    elif status_filter:
         records = BorrowRecord.objects.filter(status=status_filter)
     else:
         records = BorrowRecord.objects.all()
@@ -143,18 +171,182 @@ def borrow_list(request):
     return render(request, 'library/borrow_list.html', {'records': records, 'status_filter': status_filter})
 
 
+@login_required
 def fine_list(request):
-    status_filter = request.GET.get('status', '')
-    if status_filter:
-        fines = Fine.objects.filter(status=status_filter)
-    else:
-        fines = Fine.objects.all()
+    # Check if user is librarian
+    is_librarian = False
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        is_librarian = (profile.role == 'librarian')
+    except UserProfile.DoesNotExist:
+        pass
     
-    return render(request, 'library/fine_list.html', {'fines': fines, 'status_filter': status_filter})
+    status_filter = request.GET.get('status', '')
+    
+    # Get all existing fines from database
+    if status_filter:
+        existing_fines = Fine.objects.filter(status=status_filter)
+    else:
+        existing_fines = Fine.objects.all()
+    
+    # Get all overdue books that don't have a Fine record yet
+    overdue_records = BorrowRecord.objects.filter(
+        status__in=['overdue', 'borrowed', 'pending_return']
+    ).exclude(
+        id__in=existing_fines.values_list('borrow_record_id', flat=True)
+    )
+    
+    # Filter overdue records that actually have fines
+    overdue_with_fines = []
+    for record in overdue_records:
+        fine_amount = record.calculate_fine()
+        if fine_amount > 0:
+            overdue_with_fines.append({
+                'borrow_record': record,
+                'amount': fine_amount,
+                'status': 'pending',
+                'is_calculated': True,  # Flag to indicate this is calculated, not in DB
+            })
+    
+    # Combine existing fines with calculated fines
+    all_fines = []
+    total_amount = 0
+    
+    for fine in existing_fines:
+        record = fine.borrow_record
+        # Calculate days overdue using the model method
+        days_overdue = record.days_overdue()
+        
+        fine_amount = float(fine.amount)
+        total_amount += fine_amount
+        
+        all_fines.append({
+            'borrow_record': record,
+            'amount': fine_amount,
+            'status': fine.status,
+            'paid_date': fine.paid_date,
+            'is_calculated': False,
+            'days_overdue': days_overdue,
+            'fine_id': fine.id,  # Add fine_id for existing fines
+        })
+    
+    # Add calculated fines
+    for fine_data in overdue_with_fines:
+        record = fine_data['borrow_record']
+        # Calculate days overdue using the model method
+        days_overdue = record.days_overdue()
+        
+        fine_amount = fine_data['amount']
+        total_amount += fine_amount
+        
+        all_fines.append({
+            'borrow_record': record,
+            'amount': fine_amount,
+            'status': fine_data['status'],
+            'paid_date': None,
+            'is_calculated': True,
+            'days_overdue': days_overdue,
+            'fine_id': None,  # No fine_id for calculated fines (not in DB yet)
+        })
+    
+    # Sort by borrow date (most recent first)
+    all_fines.sort(key=lambda x: x['borrow_record'].borrow_date, reverse=True)
+    
+    # Apply status filter if specified
+    if status_filter:
+        all_fines = [f for f in all_fines if f['status'] == status_filter]
+        # Recalculate total for filtered fines
+        total_amount = sum(f['amount'] for f in all_fines)
+    
+    return render(request, 'library/fine_list.html', {
+        'fines': all_fines,
+        'status_filter': status_filter,
+        'total_amount': total_amount,
+        'total_count': len(all_fines),
+        'is_librarian': is_librarian,
+    })
+
+
+@login_required
+def mark_fine_paid(request, fine_id):
+    # Check if user is librarian
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.role != 'librarian':
+            messages.error(request, 'Only librarians can mark fines as paid')
+            return redirect('fine_list')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'Access denied')
+        return redirect('fine_list')
+    
+    fine = get_object_or_404(Fine, id=fine_id)
+    
+    if request.method == 'POST':
+        fine.status = 'paid'
+        fine.paid_date = timezone.now()
+        fine.save()
+        messages.success(request, f'Fine of RM{fine.amount:.2f} marked as paid successfully!')
+        return redirect('fine_list')
+    
+    return render(request, 'library/mark_fine_paid.html', {'fine': fine})
+
+
+@login_required
+def create_and_mark_fine_paid(request, record_id):
+    # Check if user is librarian
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.role != 'librarian':
+            messages.error(request, 'Only librarians can mark fines as paid')
+            return redirect('fine_list')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'Access denied')
+        return redirect('fine_list')
+    
+    record = get_object_or_404(BorrowRecord, id=record_id)
+    
+    if request.method == 'POST':
+        # Calculate fine amount
+        fine_amount = record.calculate_fine()
+        
+        if fine_amount > 0:
+            # Check if fine already exists
+            fine, created = Fine.objects.get_or_create(
+                borrow_record=record,
+                defaults={
+                    'amount': fine_amount,
+                    'status': 'paid',  # Mark as paid immediately
+                    'paid_date': timezone.now()
+                }
+            )
+            
+            if not created:
+                # Fine already exists, just update it
+                fine.status = 'paid'
+                fine.paid_date = timezone.now()
+                fine.save()
+            
+            messages.success(request, f'Fine of RM{fine_amount:.2f} created and marked as paid successfully!')
+        else:
+            messages.warning(request, 'No fine amount to record.')
+        
+        return redirect('fine_list')
+    
+    # Calculate fine for display
+    fine_amount = record.calculate_fine()
+    return render(request, 'library/mark_fine_paid.html', {
+        'record': record,
+        'fine_amount': fine_amount,
+        'is_calculated': True
+    })
 
 
 # Authentication Views
 def login_view(request):
+    # If user is already logged in, redirect them
+    if request.user.is_authenticated:
+        return redirect('home')
+    
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
@@ -186,41 +378,52 @@ def register_view(request):
         email = request.POST.get('email')
         password = request.POST.get('password')
         password2 = request.POST.get('password2')
-        student_id = request.POST.get('student_id')
+        role = request.POST.get('role', 'student')  # Default to student if not provided
         name = request.POST.get('name')
-        phone = request.POST.get('phone')
+        phone = request.POST.get('phone', '')
+        student_id = request.POST.get('student_id', '')
         
         # Validation
         if password != password2:
             messages.error(request, 'Passwords do not match')
-            return render(request, 'library/register.html')
+            return render(request, 'library/register.html', {'role': role})
         
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists')
-            return render(request, 'library/register.html')
+            return render(request, 'library/register.html', {'role': role})
         
         if User.objects.filter(email=email).exists():
             messages.error(request, 'Email already exists')
-            return render(request, 'library/register.html')
+            return render(request, 'library/register.html', {'role': role})
+        
+        # Role-specific validation
+        if role == 'student':
+            if not student_id:
+                messages.error(request, 'Student ID is required for student registration')
+                return render(request, 'library/register.html', {'role': role})
+            if Student.objects.filter(student_id=student_id).exists():
+                messages.error(request, 'Student ID already exists')
+                return render(request, 'library/register.html', {'role': role})
         
         # Create user
         user = User.objects.create_user(username=username, email=email, password=password)
         user.first_name = name
         user.save()
         
-        # Create user profile
-        UserProfile.objects.create(user=user, role='student', phone=phone)
+        # Create user profile with selected role
+        UserProfile.objects.create(user=user, role=role, phone=phone)
         
-        # Create student record
-        Student.objects.create(
-            user=user,
-            student_id=student_id,
-            name=name,
-            email=email,
-            phone=phone
-        )
+        # Create student record only if role is student
+        if role == 'student':
+            Student.objects.create(
+                user=user,
+                student_id=student_id,
+                name=name,
+                email=email,
+                phone=phone
+            )
         
-        messages.success(request, 'Registration successful! Please login.')
+        messages.success(request, f'Registration successful! You can now login as {role}.')
         return redirect('login')
     
     return render(request, 'library/register.html')
@@ -228,6 +431,8 @@ def register_view(request):
 
 def logout_view(request):
     logout(request)
+    # Clear any existing messages and set only the logout message
+    list(messages.get_messages(request))  # Consume all existing messages
     messages.success(request, 'You have been logged out successfully')
     return redirect('login')
 
@@ -353,7 +558,29 @@ def delete_book(request, book_id):
 @login_required
 def book_detail(request, book_id):
     book = get_object_or_404(Book, id=book_id)
-    return render(request, 'library/book_detail.html', {'book': book})
+    
+    # Check if user is student and has overdue books
+    has_overdue = False
+    overdue_count = 0
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            if profile.role == 'student':
+                student = Student.objects.get(user=request.user)
+                overdue_books = BorrowRecord.objects.filter(
+                    student=student,
+                    status='overdue'
+                )
+                overdue_count = overdue_books.count()
+                has_overdue = overdue_count > 0
+        except (UserProfile.DoesNotExist, Student.DoesNotExist):
+            pass
+    
+    return render(request, 'library/book_detail.html', {
+        'book': book,
+        'has_overdue': has_overdue,
+        'overdue_count': overdue_count,
+    })
 
 
 # Borrow and Return System
@@ -395,8 +622,12 @@ def borrow_book(request, book_id):
     )
     
     if overdue_books.exists():
-        messages.error(request, 'You have overdue books. Please return them before borrowing new books.')
-        return redirect('student_dashboard')
+        overdue_count = overdue_books.count()
+        messages.error(
+            request, 
+            f'⚠️ You have {overdue_count} overdue book(s). Please return them before borrowing new books. Go to your dashboard to see details.'
+        )
+        return redirect('book_detail', book_id=book_id)
     
     if request.method == 'POST':
         form = BorrowBookForm(request.POST)
@@ -489,15 +720,25 @@ def verify_return(request, record_id):
             book.save()
             book.refresh_from_db()
             
-            # Create fine if overdue
+            # Create fine if overdue (only if fine doesn't already exist)
             fine_amount = record.calculate_fine()
             if fine_amount > 0:
-                Fine.objects.create(
+                fine, created = Fine.objects.get_or_create(
                     borrow_record=record,
-                    amount=fine_amount,
-                    status='pending'
+                    defaults={
+                        'amount': fine_amount,
+                        'status': 'pending'
+                    }
                 )
-                messages.warning(request, f'Book returned. Fine of RM{fine_amount:.2f} has been added for late return.')
+                # If fine already exists, update the amount in case it changed (but don't change status if already paid)
+                if not created and fine.status == 'pending':
+                    fine.amount = fine_amount
+                    fine.save()
+                
+                if created:
+                    messages.warning(request, f'Book returned. Fine of RM{fine_amount:.2f} has been added for late return.')
+                else:
+                    messages.warning(request, f'Book returned. Fine of RM{fine_amount:.2f} already exists for this return.')
             else:
                 messages.success(request, f'Book "{record.book.title}" returned successfully!')
             

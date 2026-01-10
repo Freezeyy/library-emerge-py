@@ -52,8 +52,8 @@
                 <tr>
                     <td>{{ record.student.name }}</td>
                     <td>{{ record.book.title }}</td>
-                    <td>{{ record.borrow_date|date:"M d, Y" }}</td>
-                    <td>{{ record.due_date|date:"M d, Y" }}</td>
+                    <td>{{ record.borrow_date|date:"M d, Y g:i A" }}</td>
+                    <td>{{ record.due_date|date:"M d, Y g:i A" }}</td>
                     <td>
                         {% if record.status == 'borrowed' %}
                             <span class="badge badge-success">Borrowed</span>
