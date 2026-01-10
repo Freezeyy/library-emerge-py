@@ -145,8 +145,8 @@
         <h1>📚 Library Management System</h1>
         <nav>
             {% if user.is_authenticated %}
-                <a href="{% url 'home' %}">Home</a>
                 {% if user.userprofile.role == 'librarian' %}
+                    <a href="{% url 'home' %}">Home</a>
                     <a href="{% url 'book_list' %}">Books</a>
                     <a href="{% url 'student_list' %}">Students</a>
                     <a href="{% url 'borrow_list' %}">Borrow Records</a>

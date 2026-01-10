@@ -12,7 +12,32 @@ from .forms import BookForm, BorrowBookForm, ReturnVerificationForm
 from django.db.models import F
 from django.db import models
 
+def index(request):
+    """Root URL handler - redirects to appropriate page based on authentication and role"""
+    if request.user.is_authenticated:
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            if profile.role == 'librarian':
+                return redirect('home')
+            else:
+                return redirect('student_dashboard')
+        except UserProfile.DoesNotExist:
+            return redirect('login')
+    else:
+        return redirect('login')
+
+@login_required
 def home(request):
+    # Check if user is librarian - only librarians can access home page
+    try:
+        profile = UserProfile.objects.get(user=request.user)
+        if profile.role != 'librarian':
+            messages.info(request, 'Redirected to your dashboard')
+            return redirect('student_dashboard')
+    except UserProfile.DoesNotExist:
+        messages.error(request, 'Access denied')
+        return redirect('login')
+    
     # Update overdue statuses for books that are past due date
     # This ensures the status is current when displaying the home page
     overdue_records = BorrowRecord.objects.filter(
@@ -343,9 +368,16 @@ def create_and_mark_fine_paid(request, record_id):
 
 # Authentication Views
 def login_view(request):
-    # If user is already logged in, redirect them
+    # If user is already logged in, redirect them based on role
     if request.user.is_authenticated:
-        return redirect('home')
+        try:
+            profile = UserProfile.objects.get(user=request.user)
+            if profile.role == 'librarian':
+                return redirect('home')
+            else:
+                return redirect('student_dashboard')
+        except UserProfile.DoesNotExist:
+            return redirect('home')
     
     if request.method == 'POST':
         username = request.POST.get('username')
